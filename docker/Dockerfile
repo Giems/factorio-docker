@@ -8,21 +8,12 @@ ARG PUID=845
 ARG PGID=845
 ARG BOX64_VERSION=v0.2.4
 
-# optionally utilize a built-in map-gen-preset (see data/base/prototypes/map-gen-presets
-# if this is used, the preset will be used over any .json files supplied
-# vanilla factorio provides the following presets:
-# rich-resources, marathon, death-world, death-world-marathon, rail-world, ribbon-world, island
-# a modded factorio example for using this:
-# space-exploration
 ARG PRESET
-
-# version checksum of the archive to download
 ARG VERSION
 ARG SHA256
 
 LABEL factorio.version=${VERSION}
 
-# number of retries that curl will use when pulling the headless server tarball
 ARG CURL_RETRIES=8
 
 ENV PORT=34197 \
@@ -73,6 +64,21 @@ RUN set -ox pipefail \
     && addgroup --system --gid "$PGID" "$GROUP" \
     && adduser --system --uid "$PUID" --gid "$PGID" --no-create-home --disabled-password --shell /bin/sh "$USER" \
     && chown -R "$USER":"$GROUP" /opt/factorio /factorio
+
+# Install dependencies for mimalloc and huge pages
+RUN DEBIAN_FRONTEND=noninteractive apt-get -qy install libhugetlbfs-bin cmake unzip --no-install-recommends
+
+# Download and install mimalloc
+RUN curl -L https://github.com/microsoft/mimalloc/archive/refs/tags/v1.7.1.zip -o mimalloc.zip \
+    && unzip mimalloc.zip \
+    && cd mimalloc-1.7.1 \
+    && mkdir -p build \
+    && cd build \
+    && cmake .. \
+    && make \
+    && make install \
+    && cd ../.. \
+    && rm -rf mimalloc*
 
 COPY files/*.sh /
 COPY files/config.ini /opt/factorio/config/config.ini
