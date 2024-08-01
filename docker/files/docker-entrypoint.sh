@@ -1,5 +1,6 @@
 #!/bin/bash
 set -eoux pipefail
+
 FACTORIO_VOL=/factorio
 LOAD_LATEST_SAVE="${LOAD_LATEST_SAVE:-true}"
 GENERATE_NEW_SAVE="${GENERATE_NEW_SAVE:-false}"
@@ -33,7 +34,7 @@ if [[ ! -f $CONFIG/map-settings.json ]]; then
   cp /opt/factorio/data/map-settings.example.json "$CONFIG/map-settings.json"
 fi
 
-NRTMPSAVES=$( find -L "$SAVES" -iname \*.tmp.zip -mindepth 1 | wc -l )
+NRTMPSAVES=$(find -L "$SAVES" -iname \*.tmp.zip -mindepth 1 | wc -l)
 if [[ $NRTMPSAVES -gt 0 ]]; then
   # Delete incomplete saves (such as after a forced exit)
   rm -f "$SAVES"/*.tmp.zip
@@ -115,6 +116,12 @@ if [[ $LOAD_LATEST_SAVE == true ]]; then
 else
     FLAGS+=( --start-server "$SAVE_NAME" )
 fi
+
+# Set environment variables for mimalloc and huge pages
+export LD_PRELOAD=/usr/local/lib/mimalloc-1.7/libmimalloc.so
+export MIMALLOC_PAGE_RESET=0
+export HUGETLB_MORECORE=thp
+export MIMALLOC_LARGE_OS_PAGES=1
 
 # shellcheck disable=SC2086
 exec $EXEC /opt/factorio/bin/x64/factorio "${FLAGS[@]}" "$@"
