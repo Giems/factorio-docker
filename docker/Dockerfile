@@ -1,4 +1,4 @@
-FROM debian:stable-slim
+FROM alpine:latest
 
 LABEL maintainer="https://github.com/factoriotools/factorio-docker"
 
@@ -29,7 +29,7 @@ ENV PORT=34197 \
     PUID="$PUID" \
     PGID="$PGID"
 
-SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 RUN set -ox pipefail \
     && if [[ "${VERSION}" == "" ]]; then \
         echo "build-arg VERSION is required" \
@@ -41,32 +41,27 @@ RUN set -ox pipefail \
     fi \
     && archive="/tmp/factorio_headless_x64_$VERSION.tar.xz" \
     && mkdir -p /opt /factorio \
-    && apt-get -q update \
-    && DEBIAN_FRONTEND=noninteractive apt-get -qy install ca-certificates curl jq pwgen xz-utils procps gettext-base --no-install-recommends \
-    && curl -sSL "https://www.factorio.com/get-download/$VERSION/headless/linux64" -o "$archive" --retry $CURL_RETRIES\
+    && apk update \
+    && apk add --no-cache ca-certificates curl jq pwgen xz procps util-linux gettext libhugetlbfs cmake build-base unzip \
+    && curl -sSL "https://www.factorio.com/get-download/$VERSION/headless/linux64" -o "$archive" --retry $CURL_RETRIES \
     && echo "$SHA256  $archive" | sha256sum -c \
     || (sha256sum "$archive" && file "$archive" && exit 1) \
     && tar xf "$archive" --directory /opt \
     && chmod ugo=rwx /opt/factorio \
     && rm "$archive" \
     && if [[ "$(uname -m)" == "aarch64" ]]; then \
-        echo "installing ARM compatability layer" \
-        && DEBIAN_FRONTEND=noninteractive apt-get -qy install unzip --no-install-recommends \ 
+        echo "installing ARM compatibility layer" \
         && curl -LO https://github.com/ptitSeb/box64/releases/download/${BOX64_VERSION}/box64-GENERIC_ARM-RelWithDebInfo.zip \
         && unzip box64-GENERIC_ARM-RelWithDebInfo.zip -d /bin \
         && rm -f box64-GENERIC_ARM-RelWithDebInfo.zip \
         && chmod +x /bin/box64; \
     fi \
-    && rm -rf /var/lib/apt/lists/* \
     && ln -s "$SCENARIOS" /opt/factorio/scenarios \
     && ln -s "$SAVES" /opt/factorio/saves \
     && mkdir -p /opt/factorio/config/ \
-    && addgroup --system --gid "$PGID" "$GROUP" \
-    && adduser --system --uid "$PUID" --gid "$PGID" --no-create-home --disabled-password --shell /bin/sh "$USER" \
+    && addgroup -g "$PGID" "$GROUP" \
+    && adduser -D -h /factorio -s /bin/sh -G "$GROUP" -u "$PUID" "$USER" \
     && chown -R "$USER":"$GROUP" /opt/factorio /factorio
-
-# Install dependencies for mimalloc and huge pages
-RUN DEBIAN_FRONTEND=noninteractive apt-get -qy install libhugetlbfs-bin cmake unzip --no-install-recommends
 
 # Download and install mimalloc
 RUN curl -L https://github.com/microsoft/mimalloc/archive/refs/tags/v1.7.1.zip -o mimalloc.zip \
