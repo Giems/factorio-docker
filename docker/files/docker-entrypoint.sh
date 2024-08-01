@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -eoux pipefail
 
 FACTORIO_VOL=/factorio
@@ -52,7 +52,7 @@ if [[ $(id -u) = 0 ]]; then
   # Take ownership of factorio data if running as root
   chown -R factorio:factorio "$FACTORIO_VOL"
   # Drop to the factorio user
-  EXEC="runuser -u factorio -g factorio --"
+  EXEC="su-exec factorio"
 fi
 if [[ -f /bin/box64 ]]; then
   # Use an emulator to run on ARM hosts
@@ -119,7 +119,6 @@ fi
 
 # Set environment variables for mimalloc and huge pages
 export LD_PRELOAD=/usr/local/lib/mimalloc-1.7/libmimalloc.so
-export MIMALLOC_PAGE_RESET=0
 export HUGETLB_MORECORE=thp
 export MIMALLOC_LARGE_OS_PAGES=1
 

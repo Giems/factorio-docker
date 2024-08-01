@@ -1,24 +1,21 @@
-version: '2'
+version: '3.8'
 services:
   factorio:
-    build:
-      context: .
-      args:
-        # Check buildinfo.json for supported versions and SHAs
-        # https://github.com/factoriotools/factorio-docker/blob/master/buildinfo.json
-        - VERSION=1.1.109
-        - SHA256=105a38533c916fe66e2fb2b9fe8f93c116568047a20c4daa74632072c077bf3f
+    build: .
     ports:
       - "34197:34197/udp"
       - "27015:27015/tcp"
     volumes:
-      - /opt/factorio:/factorio
-#    environment:
-#      - PUID=1000
-#      - PGID=1000
-#      - UPDATE_MODS_ON_START=true
-#      - USERNAME=FactorioUsername
-#      - TOKEN=FactorioToken
-#      - PORT=34198
-#      - PRESET=deathworld
-#      - ADDR=::1
+      - factorio_data:/factorio
+    environment:
+      - LD_PRELOAD=/usr/local/lib/mimalloc-1.7/libmimalloc.so
+      - HUGETLB_MORECORE=thp
+      - MIMALLOC_LARGE_OS_PAGES=1
+    sysctls:
+      - net.core.rmem_max=16777216
+      - net.core.wmem_max=16777216
+      - net.ipv4.tcp_rmem=4096 87380 16777216
+      - net.ipv4.tcp_wmem=4096 65536 16777216
+
+volumes:
+  factorio_data:
